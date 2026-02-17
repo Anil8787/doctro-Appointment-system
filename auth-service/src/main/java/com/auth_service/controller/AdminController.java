@@ -26,4 +26,8 @@ public class AdminController {
         adminService.createDoctor(request);
         return ResponseEntity.ok("Doctor created");
     }
+
+
+
+
 }
