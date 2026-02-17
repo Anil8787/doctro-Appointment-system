@@ -1,0 +1,119 @@
+package com.booking_service.service;
+
+import com.booking_service.client.DoctorClient;
+import com.booking_service.client.PatientClient;
+import com.booking_service.client.PaymentClient;
+import com.booking_service.dto.*;
+import com.booking_service.entity.Booking;
+import com.booking_service.enums.BookingStatus;
+import com.booking_service.repository.BookingRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+
+@Service
+public class BookingService {
+
+    private final DoctorClient doctorClient;
+    private final PatientClient patientClient;
+    private final PaymentClient paymentClient;
+    private final BookingRepository bookingRepository;
+
+    public BookingService(
+            DoctorClient doctorClient,
+            PatientClient patientClient,
+            BookingRepository bookingRepository,
+            PaymentClient paymentClient
+            ) {
+
+        this.doctorClient = doctorClient;
+        this.patientClient = patientClient;
+        this.bookingRepository = bookingRepository;
+        this.paymentClient = paymentClient;
+    }
+
+    public BookingResponseDto createBooking(BookingRequestDto request) {
+
+        // 1️⃣ Validate doctor & patient
+        Doctor doctor = doctorClient.getDoctorById(request.getDoctorId());
+        Patient patient = patientClient.getPatientById(request.getPatientId());
+
+        // 2️⃣ Validate slot availability
+        boolean slotAvailable = false;
+
+        for (DoctorAppointmentSchedule schedule : doctor.getAppointmentSchedules()) {
+            if (schedule.getDate().isEqual(request.getDate())) {
+                for (TimeSlots slot : schedule.getTimeSlots()) {
+                    if (slot.getTime().equals(request.getTime())) {
+                        slotAvailable = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!slotAvailable) {
+            throw new RuntimeException("Selected slot not available");
+        }
+
+        // 3️⃣ Create booking (PENDING_PAYMENT)
+        Booking booking = new Booking();
+        booking.setDoctorId(request.getDoctorId());
+        booking.setPatientId(request.getPatientId());
+        booking.setDate(request.getDate());
+        booking.setTime(request.getTime());
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        booking.setCreatedAt(LocalDateTime.now());
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // 5️⃣ Prepare payment request
+        PaymentRequestDto paymentRequest = new PaymentRequestDto();
+        paymentRequest.setBookingId(savedBooking.getId());
+        paymentRequest.setName("Doctor Appointment with " + doctor.getName());
+        paymentRequest.setAmount(request.getAmount()); // make sure BookingRequestDto has amount
+        paymentRequest.setQuantity(1L);
+        paymentRequest.setCurrency("USD"); // or pass from request
+
+        PaymentResponseDto paymentResponse =
+                paymentClient.createPayment(paymentRequest);
+
+        // store Stripe sessionId
+        savedBooking.setPaymentSessionId(paymentResponse.getSessionId());
+        bookingRepository.save(savedBooking);
+
+        // 4️⃣ Prepare response
+        BookingResponseDto response = new BookingResponseDto();
+        response.setBookingId(savedBooking.getId());
+        response.setStatus(savedBooking.getStatus().name());
+        response.setMessage("Booking created. Proceed to payment.");
+        response.setSessionId(paymentResponse.getSessionId());
+        response.setPaymentUrl(paymentResponse.getSessionUrl());
+
+        return response;
+    }
+
+    public void confirmBooking(String sessionId) {
+        Booking booking = bookingRepository.findByPaymentSessionId(sessionId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+    }
+
+    public BookingResponseDto getBookingById(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found with id: " + bookingId));
+
+        BookingResponseDto response = new BookingResponseDto();
+        response.setBookingId(booking.getId());
+        response.setStatus(booking.getStatus().name());
+        response.setMessage("Booking retrieved successfully");
+        response.setPaymentUrl(booking.getPaymentUrl()); // optional, if stored
+        response.setSessionId(booking.getPaymentSessionId());   // optional, if stored
+
+        return response;
+    }
+}
