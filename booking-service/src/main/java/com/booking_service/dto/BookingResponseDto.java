@@ -11,4 +11,5 @@ public class BookingResponseDto {
     private String message;   // add this
     private String sessionId;
     private String paymentUrl;
+    private String patientEmail;
 }

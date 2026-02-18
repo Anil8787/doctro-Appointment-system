@@ -33,6 +33,8 @@ public class SecurityConfig {
 
                         // ✅ Patient-only search
                         .requestMatchers("/api/v1/doctor/search").hasRole("PATIENT")
+                        // Internal service endpoint → no token needed
+                        .requestMatchers("/api/v1/doctor/internal/**").permitAll()
 
                         // ✅ Doctor-only APIs
                         .requestMatchers("/api/v1/doctor/**").hasAnyRole("DOCTOR", "ADMIN")

@@ -7,6 +7,8 @@ import com.booking_service.dto.*;
 import com.booking_service.entity.Booking;
 import com.booking_service.enums.BookingStatus;
 import com.booking_service.repository.BookingRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -37,7 +39,13 @@ public class BookingService {
 
     public BookingResponseDto createBooking(BookingRequestDto request) {
 
-        // 1️⃣ Validate doctor & patient
+//        // Get current authentication
+//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+//
+//
+//        String token = (String) auth.getCredentials(); // JWT token
+//        System.out.println("token:"+token);
+//        // 1️⃣ Validate doctor & patient
         Doctor doctor = doctorClient.getDoctorById(request.getDoctorId());
         Patient patient = patientClient.getPatientById(request.getPatientId());
 
@@ -92,6 +100,7 @@ public class BookingService {
         response.setMessage("Booking created. Proceed to payment.");
         response.setSessionId(paymentResponse.getSessionId());
         response.setPaymentUrl(paymentResponse.getSessionUrl());
+        response.setPatientEmail(patient.getEmail());
 
         return response;
     }

@@ -26,7 +26,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final List<String> openApiEndpoints = List.of(
             "/api/v1/auth/register",
-            "/api/v1/auth/login"
+            "/api/v1/auth/login",
+            "/api/v1/doctor/internal"
+            //"/api/v1/patient/internal" // add this
     );
 
     private static final Map<String, List<String>> protectedEndpointsWithRoles = new LinkedHashMap<>();
@@ -48,7 +50,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String requestPath = exchange.getRequest().getURI().getPath();
         System.out.println("🔥 Gateway hit: " + requestPath);
         // Allow public endpoints
+
+        // ✅ ALLOW internal calls with service token
+        String serviceToken = exchange.getRequest().getHeaders().getFirst("X-Service-Token");
+        System.out.println("🔥 X-Service-Token: " + serviceToken);
+        if ("booking-service-secret".equals(serviceToken)) {
+            return chain.filter(exchange); // allow internal microservice calls
+        }
+
         if (isPublicEndpoint(requestPath)) {
+            System.out.println("🔓 Public endpoint: " + requestPath);
             return chain.filter(exchange);
         }
 

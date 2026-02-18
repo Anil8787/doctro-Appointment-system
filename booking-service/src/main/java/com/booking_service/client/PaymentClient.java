@@ -6,7 +6,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "PAYMENT-SERVICE")
+@FeignClient(name = "PAYMENT-SERVICE",configuration = com.booking_service.config.FeignConfig.class)
 public interface PaymentClient {
     @PostMapping("/product/v1/checkout")
     PaymentResponseDto createPayment(

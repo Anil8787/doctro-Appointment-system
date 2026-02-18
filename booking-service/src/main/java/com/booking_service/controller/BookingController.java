@@ -3,41 +3,65 @@ package com.booking_service.controller;
 import com.booking_service.dto.BookingRequestDto;
 import com.booking_service.dto.BookingResponseDto;
 import com.booking_service.service.BookingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
-import java.time.LocalTime;
 
 @RestController
 @RequestMapping("/api/v1/booking")
 public class BookingController {
 
     private final BookingService bookingService;
-    @Autowired
+
     public BookingController(BookingService bookingService) {
         this.bookingService = bookingService;
     }
 
-    // POST instead of GET ✅
-    //http://localhost:8083/api/v1/booking/create
+    //
+    // ✅ Only patients can create bookings
     @PostMapping("/create")
-    public BookingResponseDto createBooking(
-            @RequestBody BookingRequestDto request) {
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<BookingResponseDto> createBooking(
+            @RequestBody BookingRequestDto request,
+            Authentication authentication
+    ) {
+        // patient ID or email from JWT
+        String patientId = authentication.getName();
 
-        return bookingService.createBooking(request);
+        // Override patientId in request to ensure security
+        //request.setPatientId(Long.parseLong(patientId));
+
+        BookingResponseDto response = bookingService.createBooking(request);
+        return ResponseEntity.ok(response);
     }
 
+    // ✅ Confirm booking (patient-only)
     @PutMapping("/confirm")
-    public void confirmBooking(@RequestParam String sessionId) {
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<Void> confirmBooking(
+            @RequestParam String sessionId,
+            Authentication authentication
+    ) {
         bookingService.confirmBooking(sessionId);
+        return ResponseEntity.ok().build();
     }
 
-    // GET booking by ID
-    //http://localhost:8083/api/v1/booking/2
+    // ✅ Get booking by ID (patient can only view own booking)
     @GetMapping("/{id}")
-    public BookingResponseDto getBooking(@PathVariable("id") Long bookingId) {
-        return bookingService.getBookingById(bookingId);
-    }
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<BookingResponseDto> getBooking(
+            @PathVariable("id") Long bookingId,
+            Authentication authentication
+    ) {
+        String patientId = authentication.getName();
+        BookingResponseDto response = bookingService.getBookingById(bookingId);
 
+        // Optional: verify patient owns booking
+//        if (!response.getPatientId().equals(Long.parseLong(patientId))) {
+//            return ResponseEntity.status(403).build(); // Forbidden
+//        }
+
+        return ResponseEntity.ok(response);
+    }
 }

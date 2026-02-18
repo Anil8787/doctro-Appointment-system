@@ -62,6 +62,19 @@ public class PatientService {
         BeanUtils.copyProperties(updated, response);
         return response;
     }
+
+    @Transactional(readOnly = true)
+    public PatientResponseDto getPatientById(long id) {
+        // Fetch patient by ID
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Patient not found with id " + id));
+
+        // Convert to DTO
+        PatientResponseDto response = new PatientResponseDto();
+        BeanUtils.copyProperties(patient, response);
+
+        return response;
+    }
 }
 
 

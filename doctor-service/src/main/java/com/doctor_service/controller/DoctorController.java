@@ -30,5 +30,10 @@ public class DoctorController {
         return doctorService.getDoctorById(id);
     }
 
+    // no user role check here
+    @GetMapping("/internal/getdoctorbyid")
+    public Doctor getDoctorByIdInternal(@RequestParam long id) {
+        return doctorService.getDoctorById(id);
+    }
 
 }

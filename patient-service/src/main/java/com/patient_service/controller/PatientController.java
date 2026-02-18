@@ -54,4 +54,12 @@ public class PatientController {
                 patientService.updateMyProfile(dto, authEmail)
         );
     }
+    //http://localhost:5555/api/v1/patient/internal/getpatientbyid
+    @GetMapping("/getpatientbyid")
+    public ResponseEntity<PatientResponseDto> getPatientById(@RequestParam long id) {
+        PatientResponseDto patient = patientService.getPatientById(id);
+        return ResponseEntity.ok(patient);
+    }
+
+
 }

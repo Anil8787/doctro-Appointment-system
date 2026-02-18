@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(name = "DOCTOR-SERVICE")
 public interface DoctorClient {
-    @GetMapping("/api/v1/doctor/getdoctorbyid")
+    @GetMapping("/api/v1/doctor/internal/getdoctorbyid")
     public Doctor getDoctorById(@RequestParam long id);
 }

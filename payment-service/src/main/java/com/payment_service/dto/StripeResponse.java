@@ -11,3 +11,4 @@ public class StripeResponse {
     private String sessionId;
     private String sessionUrl;
 }
+
