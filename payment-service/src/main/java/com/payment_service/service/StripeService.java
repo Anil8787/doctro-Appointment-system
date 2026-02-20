@@ -2,6 +2,9 @@ package com.payment_service.service;
 
 import com.payment_service.dto.ProductRequest;
 import com.payment_service.dto.StripeResponse;
+import com.payment_service.entity.Payment;
+import com.payment_service.entity.PaymentStatus;
+import com.payment_service.repository.PaymentRepository;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
@@ -11,6 +14,12 @@ import java.math.BigDecimal;
 
 @Service
 public class StripeService {
+
+    private final PaymentRepository  paymentRepository;
+
+    public StripeService(PaymentRepository paymentRepository) {
+        this.paymentRepository = paymentRepository;
+    }
 
     public StripeResponse checkoutProducts(ProductRequest productRequest) {
 
@@ -51,7 +60,22 @@ public class StripeService {
                         .build();
 
         try {
+            // ✅ CREATE STRIPE SESSION
             Session session = Session.create(params);
+
+            // 🔥 EXACT LINE YOU ASKED FOR
+            String paymentIntentId = session.getPaymentIntent();
+            // ✅ SAVE PAYMENT IN DATABASE
+            Payment payment = Payment.builder()
+                    .bookingId(productRequest.getBookingId())
+                    .amount(productRequest.getAmount())
+                    .currency(productRequest.getCurrency())
+                    .stripePaymentIntentId(paymentIntentId) // ✅ STORED HERE
+                    .stripeSessionId(session.getId())
+                    .status(PaymentStatus.INITIATED)
+                    .build();
+
+            paymentRepository.save(payment);
 
             StripeResponse sr = new StripeResponse();
             sr.setStatus("SUCCESS");

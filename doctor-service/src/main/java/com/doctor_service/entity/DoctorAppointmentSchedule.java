@@ -19,8 +19,8 @@ public class DoctorAppointmentSchedule {
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "doctor_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "doctor_id", nullable = false)
     @JsonBackReference
     private Doctor doctor;
 

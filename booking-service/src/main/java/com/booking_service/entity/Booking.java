@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -30,7 +31,10 @@ public class Booking {
 
     private LocalDateTime createdAt;
 
-    @Column(name = "payment_url")
+    @Column(nullable = false)
+    private BigDecimal amount;
+
+    @Column(name = "payment_url",length = 500)
     private String paymentUrl;
 }
 

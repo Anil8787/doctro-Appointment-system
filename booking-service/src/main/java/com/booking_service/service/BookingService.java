@@ -73,6 +73,7 @@ public class BookingService {
         booking.setPatientId(request.getPatientId());
         booking.setDate(request.getDate());
         booking.setTime(request.getTime());
+        booking.setAmount(request.getAmount());
         booking.setStatus(BookingStatus.PENDING_PAYMENT);
         booking.setCreatedAt(LocalDateTime.now());
 
@@ -84,13 +85,14 @@ public class BookingService {
         paymentRequest.setName("Doctor Appointment with " + doctor.getName());
         paymentRequest.setAmount(request.getAmount()); // make sure BookingRequestDto has amount
         paymentRequest.setQuantity(1L);
-        paymentRequest.setCurrency("USD"); // or pass from request
+        paymentRequest.setCurrency("INR"); // or pass from request
 
         PaymentResponseDto paymentResponse =
                 paymentClient.createPayment(paymentRequest);
 
         // store Stripe sessionId
         savedBooking.setPaymentSessionId(paymentResponse.getSessionId());
+        savedBooking.setPaymentUrl(paymentResponse.getSessionUrl()); // ✅ store payment URL
         bookingRepository.save(savedBooking);
 
         // 4️⃣ Prepare response
@@ -101,13 +103,18 @@ public class BookingService {
         response.setSessionId(paymentResponse.getSessionId());
         response.setPaymentUrl(paymentResponse.getSessionUrl());
         response.setPatientEmail(patient.getEmail());
+        response.setDoctorEmail(doctor.getName());
 
         return response;
     }
 
-    public void confirmBooking(String sessionId) {
-        Booking booking = bookingRepository.findByPaymentSessionId(sessionId)
+    public void confirmBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
+        // ✅ idempotent
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            return;
+        }
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
     }
@@ -116,9 +123,16 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found with id: " + bookingId));
 
+        // ✅ Fetch patient details from PatientClient
+        Patient patient = patientClient.getPatientById(booking.getPatientId());
+        Doctor doctor = doctorClient.getDoctorById(booking.getDoctorId());
+
         BookingResponseDto response = new BookingResponseDto();
         response.setBookingId(booking.getId());
         response.setStatus(booking.getStatus().name());
+        response.setPatientEmail(patient.getEmail());
+        response.setDoctorEmail(doctor.getName());
+        //response.setPaymentUrl(booking.getPaymentUrl());
         response.setMessage("Booking retrieved successfully");
         response.setPaymentUrl(booking.getPaymentUrl()); // optional, if stored
         response.setSessionId(booking.getPaymentSessionId());   // optional, if stored

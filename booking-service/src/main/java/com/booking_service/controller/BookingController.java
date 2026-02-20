@@ -38,12 +38,12 @@ public class BookingController {
 
     // ✅ Confirm booking (patient-only)
     @PutMapping("/confirm")
-    @PreAuthorize("hasRole('PATIENT')")
+    //@PreAuthorize("hasRole('PATIENT')")
     public ResponseEntity<Void> confirmBooking(
-            @RequestParam String sessionId,
+            @RequestParam Long bookingId,
             Authentication authentication
     ) {
-        bookingService.confirmBooking(sessionId);
+        bookingService.confirmBooking(bookingId);
         return ResponseEntity.ok().build();
     }
 

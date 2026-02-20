@@ -101,6 +101,7 @@
 	</dependencyManagement>
 
 	<build>
+		<finalName>booking-service</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
