@@ -11,6 +11,7 @@ public class TimeSlots {
 
     private Long id;
     private LocalTime time;
+    private boolean available;
     private DoctorAppointmentSchedule doctorAppointmentSchedule;
 
 }

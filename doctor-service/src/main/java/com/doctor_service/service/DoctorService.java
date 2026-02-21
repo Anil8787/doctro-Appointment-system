@@ -4,6 +4,7 @@ import com.doctor_service.dto.DoctorProfileRequestDto;
 import com.doctor_service.dto.DoctorProfileResponseDto;
 import com.doctor_service.dto.SearchResultDto;
 import com.doctor_service.entity.*;
+import com.doctor_service.exception.ResourceNotFoundException;
 import com.doctor_service.repository.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -191,7 +192,7 @@ public class DoctorService {
     ) {
 
         Doctor doctor = doctorRepository.findByAuthEmail(authEmail)
-                .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found"));
 
         mapRequestToEntity(dto, doctor);
 
@@ -270,5 +271,28 @@ public class DoctorService {
         dto.setArea(doctor.getArea().getName());
 
         return dto;
+    }
+
+    public void updateDoctorSchedule(Long id, List<DoctorAppointmentSchedule> appointmentSchedules) {
+
+        // 1️⃣ Fetch the doctor from DB
+        Doctor doctor = doctorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Doctor not found with id: " + id));
+        // 2️⃣ Update the doctor's schedules
+        for (DoctorAppointmentSchedule schedule : appointmentSchedules) {
+            // Link schedule to doctor if needed
+            schedule.setDoctor(doctor);
+
+            // Update each time slot
+            for (TimeSlots slot : schedule.getTimeSlots()) {
+                slot.setDoctorAppointmentSchedule(schedule); // ensure relationship is set
+                // slot.available is already set in booking service
+            }
+        }
+
+        // 3️⃣ Save schedules (cascade will save TimeSlots if mapped correctly)
+        doctor.setAppointmentSchedules(appointmentSchedules);
+        doctorRepository.save(doctor);
+
     }
 }

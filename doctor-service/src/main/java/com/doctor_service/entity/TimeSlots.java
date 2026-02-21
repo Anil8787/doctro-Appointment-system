@@ -21,6 +21,8 @@ public class TimeSlots {
     @Column(name = "time")
     private LocalTime time;
 
+    private boolean available; // <-- add this
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_schedule_id")
     @JsonBackReference

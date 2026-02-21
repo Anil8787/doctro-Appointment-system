@@ -13,11 +13,18 @@ import java.time.LocalTime;
 @Getter
 @Setter
 @Entity
-@Table(name="bookings")
+@Table(
+        name = "bookings",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_doctor_date_time_status",
+                columnNames = {"doctorId", "date", "time", "status"}
+        )
+)
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+
     private long doctorId;
     private long patientId;
 
@@ -34,7 +41,6 @@ public class Booking {
     @Column(nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "payment_url",length = 500)
+    @Column(name = "payment_url", length = 500)
     private String paymentUrl;
 }
-

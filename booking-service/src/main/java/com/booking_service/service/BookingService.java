@@ -55,7 +55,7 @@ public class BookingService {
         for (DoctorAppointmentSchedule schedule : doctor.getAppointmentSchedules()) {
             if (schedule.getDate().isEqual(request.getDate())) {
                 for (TimeSlots slot : schedule.getTimeSlots()) {
-                    if (slot.getTime().equals(request.getTime())) {
+                    if (slot.getTime().equals(request.getTime()) && slot.isAvailable()) {
                         slotAvailable = true;
                         break;
                     }
@@ -65,6 +65,18 @@ public class BookingService {
 
         if (!slotAvailable) {
             throw new RuntimeException("Selected slot not available");
+        }
+
+        // ✅ Check if the slot is already booked
+        boolean alreadyBooked = bookingRepository.existsByDoctorIdAndDateAndTimeAndStatus(
+                request.getDoctorId(),
+                request.getDate(),
+                request.getTime(),
+                BookingStatus.CONFIRMED
+        );
+
+        if (alreadyBooked) {
+            throw new RuntimeException("Selected slot is already booked");
         }
 
         // 3️⃣ Create booking (PENDING_PAYMENT)
@@ -117,6 +129,24 @@ public class BookingService {
         }
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
+        Doctor doctor = doctorClient.getDoctorById(booking.getDoctorId());
+
+        boolean updated = false;
+        for (DoctorAppointmentSchedule schedule : doctor.getAppointmentSchedules()) {
+            if (schedule.getDate().isEqual(booking.getDate())) {
+                for (TimeSlots slot : schedule.getTimeSlots()) {
+                    if (slot.getTime().equals(booking.getTime()) && slot.isAvailable()) {
+                        slot.setAvailable(false);  // <-- mark unavailable
+                        updated = true;
+                        break;
+                    }
+                }
+            }
+            if (updated) break;
+        }
+
+        // 3️⃣ Save updated schedule back to doctor service
+        doctorClient.updateDoctorSchedule(doctor.getId(), doctor.getAppointmentSchedules());
     }
 
     public BookingResponseDto getBookingById(Long bookingId) {
