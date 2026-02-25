@@ -10,7 +10,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -24,19 +26,22 @@ public class DoctorService {
     private final CityRepository cityRepository;
     private final AreaRepository areaRepository;
     private final TimeSlotsRepository timeSlotsRepository;
+    private final S3Service s3Service;
 
     public DoctorService(
             DoctorRepository doctorRepository,
             TimeSlotsRepository timeSlotsRepository,
             StateRepository stateRepository,
             CityRepository cityRepository,
-            AreaRepository areaRepository
+            AreaRepository areaRepository,
+            S3Service s3Service
     ) {
         this.doctorRepository = doctorRepository;
         this.timeSlotsRepository = timeSlotsRepository;
         this.stateRepository = stateRepository;
         this.cityRepository = cityRepository;
         this.areaRepository = areaRepository;
+        this.s3Service = s3Service;
     }
 
 
@@ -162,8 +167,9 @@ public class DoctorService {
 
     public DoctorProfileResponseDto createMyProfile(
             DoctorProfileRequestDto dto,
+
             String authEmail
-    ) {
+    ) throws IOException {
 
         if (doctorRepository.existsByAuthEmail(authEmail)) {
             throw new RuntimeException("Doctor profile already exists");
@@ -173,6 +179,7 @@ public class DoctorService {
         Doctor doctor = new Doctor();
         doctor.setAuthEmail(authEmail);
         mapRequestToEntity(dto, doctor);
+
 
         Doctor saved = doctorRepository.save(doctor);
         return mapToResponse(saved);
@@ -211,8 +218,9 @@ public class DoctorService {
         doctor.setQualification(dto.getQualification());
         doctor.setContact(dto.getContact());
         doctor.setExperience(dto.getExperience());
-        doctor.setUrl(dto.getUrl());
+        //doctor.setUrl(dto.getUrl());
         doctor.setAddress(dto.getAddress());
+
 
         // ---------- Handle State ----------
         if (dto.getState() != null && !dto.getState().isBlank()) {
@@ -294,5 +302,30 @@ public class DoctorService {
         doctor.setAppointmentSchedules(appointmentSchedules);
         doctorRepository.save(doctor);
 
+    }
+
+    public DoctorProfileResponseDto uploadProfilePhoto(
+            MultipartFile photo,
+            String authEmail
+    ) throws IOException {
+
+        Doctor doctor = doctorRepository.findByAuthEmail(authEmail)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Doctor profile not found"));
+
+        if (photo == null || photo.isEmpty()) {
+            throw new IllegalArgumentException("Photo is required");
+        }
+
+        // Optional: validate file type
+        if (!photo.getContentType().startsWith("image/")) {
+            throw new IllegalArgumentException("Only image files are allowed");
+        }
+
+        String imageUrl = s3Service.uploadDoctorPhoto(photo);
+        doctor.setUrl(imageUrl);
+
+        Doctor saved = doctorRepository.save(doctor);
+        return mapToResponse(saved);
     }
 }

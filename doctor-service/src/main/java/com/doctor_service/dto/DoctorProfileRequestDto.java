@@ -11,7 +11,7 @@ public class DoctorProfileRequestDto {
     private String qualification;
     private String contact;
     private String experience;
-    private String url;
+    //private String url;
     private String address;
 
     private String state;
