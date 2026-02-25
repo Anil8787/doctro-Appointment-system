@@ -1,11 +1,9 @@
 package com.auth_service.controller;
 
-import com.auth_service.dto.ChangePasswordRequestDto;
-import com.auth_service.dto.LoginRequest;
-import com.auth_service.dto.LoginResponse;
-import com.auth_service.dto.RegisterRequest;
+import com.auth_service.dto.*;
 import com.auth_service.entity.User;
 import com.auth_service.service.AuthService;
+import com.auth_service.service.OtpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final OtpService otpService;
 //    public AuthController(AuthService authService) {
 //        this.authService = authService;
 //    }
@@ -48,4 +47,17 @@ public class AuthController {
         return ResponseEntity.ok(result);
     }
 
-}
+    // Step 1: Request OTP
+    @PostMapping("/request-otp")
+    public ResponseEntity<String> requestOtp(@RequestBody OtpRequestDto dto) {
+        otpService.createOtp(dto.getEmail());
+        return ResponseEntity.ok("OTP sent successfully");
+    }
+
+    // Step 2: Verify OTP and issue JWT
+    @PostMapping("/verify-otp")
+    public LoginResponse verifyOtp(@RequestBody OtpVerifyDto dto) {
+        return otpService.verifyOtp(dto);
+    }
+
+    }

@@ -27,7 +27,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> openApiEndpoints = List.of(
             "/api/v1/auth/register",
             "/api/v1/auth/login",
-            "/api/v1/doctor/internal"
+            "/api/v1/doctor/internal",
+            "/api/v1/auth/request-otp",
+            "/api/v1/auth/verify-otp"
             //"/api/v1/patient/internal" // add this
     );
 
