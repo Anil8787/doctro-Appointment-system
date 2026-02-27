@@ -7,6 +7,7 @@ import com.booking_service.dto.*;
 import com.booking_service.entity.Booking;
 import com.booking_service.enums.BookingStatus;
 import com.booking_service.repository.BookingRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -99,8 +100,18 @@ public class BookingService {
         paymentRequest.setQuantity(1L);
         paymentRequest.setCurrency("INR"); // or pass from request
 
+//        PaymentResponseDto paymentResponse =
+//                paymentClient.createPayment(paymentRequest);
+
         PaymentResponseDto paymentResponse =
-                paymentClient.createPayment(paymentRequest);
+                callPaymentService(paymentRequest);
+        if (paymentResponse == null || "FAILED".equals(paymentResponse.getStatus())) {
+            BookingResponseDto response = new BookingResponseDto();
+            response.setBookingId(savedBooking.getId());
+            response.setStatus(BookingStatus.PENDING_PAYMENT.name());
+            response.setMessage("Payment service is temporarily unavailable. Please try again later.");
+            return response;
+        }
 
         // store Stripe sessionId
         savedBooking.setPaymentSessionId(paymentResponse.getSessionId());
@@ -119,6 +130,7 @@ public class BookingService {
 
         return response;
     }
+
 
     public void confirmBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
@@ -167,6 +179,23 @@ public class BookingService {
         response.setPaymentUrl(booking.getPaymentUrl()); // optional, if stored
         response.setSessionId(booking.getPaymentSessionId());   // optional, if stored
 
+        return response;
+    }
+
+
+    @CircuitBreaker(name = "paymentService", fallbackMethod = "paymentFallback")
+    public PaymentResponseDto callPaymentService(PaymentRequestDto paymentRequest) {
+        return paymentClient.createPayment(paymentRequest);
+    }
+
+    public PaymentResponseDto paymentFallback(
+            PaymentRequestDto request,
+            Exception ex
+    ) {
+        PaymentResponseDto response = new PaymentResponseDto();
+        response.setStatus("FAILED");
+        response.setSessionId(null);
+        response.setSessionUrl(null);
         return response;
     }
 }

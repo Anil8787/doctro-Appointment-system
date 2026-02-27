@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface OtpRepository extends JpaRepository<Otp, Long> {
 
-    Optional<Otp> findByEmailAndOtpCodeAndVerifiedFalse(String email, String otpCode);
+//    Optional<Otp> findByEmailAndOtpCodeAndVerifiedFalse(String email, String otpCode);
+        Optional<Otp> findTopByEmailAndVerifiedFalseOrderByExpiryTimeDesc(String email);
 }

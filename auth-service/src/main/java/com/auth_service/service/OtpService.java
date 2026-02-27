@@ -49,21 +49,29 @@ public class OtpService {
     //verify otp
     // Step 2: Verify OTP and return LoginResponse with JWT
     public LoginResponse verifyOtp(OtpVerifyDto dto){
-        Otp otp = otpRepository.findByEmailAndOtpCodeAndVerifiedFalse(dto.getEmail(), dto.getOtpCode())
-                .orElseThrow(() -> new RuntimeException("Invalid OTP!"));
+        // Step 1: Find latest unverified OTP for email
+        Otp otp = otpRepository.findTopByEmailAndVerifiedFalseOrderByExpiryTimeDesc(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("No OTP requested or already verified"));
 
+        // Step 2: Check expiry
         if (otp.getExpiryTime().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Expired OTP");
         }
 
+        // Step 3: Check OTP code
+        if (!otp.getOtpCode().equals(dto.getOtpCode())) {
+            throw new RuntimeException("Invalid OTP!");
+        }
+
+        // Step 4: Mark OTP as verified
         otp.setVerified(true);
         otpRepository.save(otp);
 
-        // Find user
+        // Step 5: Find user
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Generate JWT
+        // Step 6: Generate JWT
         String token = jwtUtil.generateToken(user.getEmail(), "ROLE_" + user.getRole().name());
 
         return new LoginResponse(token);

@@ -38,6 +38,7 @@ public class DoctorScheduleService {
                     TimeSlots slot = new TimeSlots();
                     slot.setTime(time);
                     slot.setDoctorAppointmentSchedule(schedule);
+                    slot.setAvailable(true);   // ✅ THIS LINE IS MANDATORY
                     return slot;
                 })
                 .toList();
