@@ -29,13 +29,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/actuator/**").permitAll()
 
                         .requestMatchers("/api/v1/booking/confirm").permitAll()
+                        // ✅ Specific paths first
+                        .requestMatchers("/api/v1/booking/doctor/me").hasRole("DOCTOR")
 
-                        // Only patients can create & view bookings
+                        // Only patients can create & view other bookings
                         .requestMatchers("/api/v1/booking/**").hasRole("PATIENT")
+
+                        // Public / actuator endpoints
+                        .requestMatchers("/actuator/**").permitAll()
+                        //.requestMatchers("/api/v1/booking/confirm").permitAll()
 
                         .anyRequest().authenticated()
                 )

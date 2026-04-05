@@ -1,7 +1,9 @@
 package com.patient_service.controller;
 
+import com.patient_service.dto.PatientCreateRequest;
 import com.patient_service.dto.PatientRequestDto;
 import com.patient_service.dto.PatientResponseDto;
+import com.patient_service.entity.Patient;
 import com.patient_service.service.PatientService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,6 +29,17 @@ public class PatientController {
 
         return ResponseEntity.ok(
                 patientService.createPatient(dto, authEmail)
+        );
+    }
+
+    //by auth-service this patient directly created ok
+    @PostMapping("/create")
+    public void createPatientInternal(
+            @RequestBody PatientCreateRequest request
+    ) {
+        patientService.createPatientInternal(
+                request.getAuthEmail(),
+                request.getEmail()
         );
     }
 
@@ -58,6 +71,11 @@ public class PatientController {
     @GetMapping("/getpatientbyid")
     public ResponseEntity<PatientResponseDto> getPatientById(@RequestParam long id) {
         PatientResponseDto patient = patientService.getPatientById(id);
+        return ResponseEntity.ok(patient);
+    }
+    @GetMapping("/getbyemail")
+    public ResponseEntity<Patient> getPatientByEmail(@RequestParam String email) {
+        Patient patient = patientService.getPatientByEmail(email); // service method
         return ResponseEntity.ok(patient);
     }
 

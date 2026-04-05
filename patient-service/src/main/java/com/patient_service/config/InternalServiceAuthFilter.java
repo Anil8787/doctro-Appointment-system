@@ -20,13 +20,32 @@ public class InternalServiceAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String token = request.getHeader("X-Service-Token");
 
-        if (path.equals("/api/v1/patient/getpatientbyid")) {
-            // Only block if token exists but is invalid
-            if (token != null && !"booking-service-secret".equals(token)) {
+//        if (path.equals("/api/v1/patient/getpatientbyid")) {
+//            // Only block if token exists but is invalid
+//            if (token != null && !"booking-service-secret".equals(token)) {
+//                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+//                return;
+//            }
+//            // ✅ If token is null, we allow it and JwtFilter handles authentication
+//        }
+
+        if (path.equals("/api/v1/patient/getpatientbyid")
+                || path.equals("/api/v1/patient/getbyemail")) {
+
+            if (token != null &&
+                    !"booking-service-secret".equals(token) &&
+                    !"medicine-service-secret".equals(token)) {
+
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
-            // ✅ If token is null, we allow it and JwtFilter handles authentication
+        }
+
+        if (path.equals("/api/v1/patient/create")) {
+            if (!"auth-service-secret".equals(token)) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
         }
 
         System.out.println("🔥 InternalServiceAuthFilter: path=" + path + ", token=" + token);

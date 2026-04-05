@@ -50,6 +50,11 @@ public class DoctorController {
         doctorService.updateDoctorSchedule(id, appointmentSchedules);
     }
 
+    @GetMapping("/internal/getdoctorbyEmail")
+    public Doctor getDoctorById(@RequestParam String doctorEmail){
+        return doctorService.getDoctorByEmail(doctorEmail);
+    }
+
 
 
 

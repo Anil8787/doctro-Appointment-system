@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
         configuration = com.booking_service.config.FeignConfig.class
         )
 public interface PaymentClient {
-    @PostMapping("/product/v1/checkout")
+    @PostMapping("/product/v1/checkout/appointment")
     PaymentResponseDto createPayment(
             @RequestBody PaymentRequestDto request);
 }

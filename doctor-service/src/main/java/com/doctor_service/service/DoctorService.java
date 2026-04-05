@@ -328,4 +328,8 @@ public class DoctorService {
         Doctor saved = doctorRepository.save(doctor);
         return mapToResponse(saved);
     }
+
+    public Doctor getDoctorByEmail(String doctorEmail) {
+        return doctorRepository.findByEmail(doctorEmail).orElseThrow(() -> new RuntimeException("Doctor not found with email: " + doctorEmail));
+    }
 }

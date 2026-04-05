@@ -12,6 +12,9 @@ public class ProductRequest {
     // reference from booking-service
     private Long bookingId;
 
+    //reference for medicine order-service
+    //private Long orderId;
+
     // payment details
     private BigDecimal amount;     // 299.00
     private String currency;       // USD

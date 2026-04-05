@@ -6,6 +6,7 @@ import com.booking_service.client.PaymentClient;
 import com.booking_service.dto.*;
 import com.booking_service.entity.Booking;
 import com.booking_service.enums.BookingStatus;
+import com.booking_service.exception.BookingExpiredException;
 import com.booking_service.repository.BookingRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.security.core.Authentication;
@@ -38,7 +39,7 @@ public class BookingService {
         this.paymentClient = paymentClient;
     }
 
-    public BookingResponseDto createBooking(BookingRequestDto request) {
+    public BookingResponseDto createBooking(BookingRequestDto request,String patientEmail) {
 
 //        // Get current authentication
 //        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -48,7 +49,7 @@ public class BookingService {
 //        System.out.println("token:"+token);
 //        // 1️⃣ Validate doctor & patient
         Doctor doctor = doctorClient.getDoctorById(request.getDoctorId());
-        Patient patient = patientClient.getPatientById(request.getPatientId());
+        Patient patient = patientClient.getPatientByEmail(patientEmail);
 
         // 2️⃣ Validate slot availability
         boolean slotAvailable = false;
@@ -68,22 +69,21 @@ public class BookingService {
             throw new RuntimeException("Selected slot not available");
         }
 
-        // ✅ Check if the slot is already booked
-        boolean alreadyBooked = bookingRepository.existsByDoctorIdAndDateAndTimeAndStatus(
+        boolean alreadyBooked = bookingRepository.existsByDoctorIdAndDateAndTimeAndStatusIn(
                 request.getDoctorId(),
                 request.getDate(),
                 request.getTime(),
-                BookingStatus.CONFIRMED
+                List.of(BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED)
         );
-
         if (alreadyBooked) {
-            throw new RuntimeException("Selected slot is already booked");
+            throw new RuntimeException("Selected slot is already booked or pending payment");
         }
+
 
         // 3️⃣ Create booking (PENDING_PAYMENT)
         Booking booking = new Booking();
         booking.setDoctorId(request.getDoctorId());
-        booking.setPatientId(request.getPatientId());
+        booking.setPatientId(patient.getId());
         booking.setDate(request.getDate());
         booking.setTime(request.getTime());
         booking.setAmount(request.getAmount());
@@ -133,14 +133,20 @@ public class BookingService {
 
 
     public void confirmBooking(Long bookingId) {
+
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
-        // ✅ idempotent
-        if (booking.getStatus() == BookingStatus.CONFIRMED) {
-            return;
+
+        // 🔒 STRICT STATUS CHECK (VERY IMPORTANT)
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new BookingExpiredException("Payment session expired");
         }
+
+        // ✅ Confirm booking
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
+
+        // 🔽 Block doctor slot
         Doctor doctor = doctorClient.getDoctorById(booking.getDoctorId());
 
         boolean updated = false;
@@ -148,7 +154,7 @@ public class BookingService {
             if (schedule.getDate().isEqual(booking.getDate())) {
                 for (TimeSlots slot : schedule.getTimeSlots()) {
                     if (slot.getTime().equals(booking.getTime()) && slot.isAvailable()) {
-                        slot.setAvailable(false);  // <-- mark unavailable
+                        slot.setAvailable(false);
                         updated = true;
                         break;
                     }
@@ -157,8 +163,11 @@ public class BookingService {
             if (updated) break;
         }
 
-        // 3️⃣ Save updated schedule back to doctor service
-        doctorClient.updateDoctorSchedule(doctor.getId(), doctor.getAppointmentSchedules());
+        // 🔁 Persist slot update
+        doctorClient.updateDoctorSchedule(
+                doctor.getId(),
+                doctor.getAppointmentSchedules()
+        );
     }
 
     public BookingResponseDto getBookingById(Long bookingId) {
@@ -197,5 +206,60 @@ public class BookingService {
         response.setSessionId(null);
         response.setSessionUrl(null);
         return response;
+    }
+
+    // ✅ Patient: get all bookings by email
+    // ✅ Patient: get all bookings by JWT email
+    public List<BookingResponseDto> getBookingsByPatientEmail(String patientEmail) {
+        // 1️⃣ Get patient info by email
+        Patient patient = patientClient.getPatientByEmail(patientEmail);
+        long patientId = patient.getId();
+
+        // 2️⃣ Fetch bookings by patientId
+        return bookingRepository.findByPatientId(patientId)
+                .stream()
+                .map(booking -> {
+                    Doctor doctor = doctorClient.getDoctorById(booking.getDoctorId());
+
+                    BookingResponseDto dto = new BookingResponseDto();
+                    dto.setBookingId(booking.getId());
+                    dto.setPatientEmail(patientEmail); // already have email
+                    dto.setDoctorEmail(doctor.getName());
+                    dto.setDate(booking.getDate());
+                    dto.setTime(booking.getTime());
+                    dto.setStatus(booking.getStatus().name());
+                    dto.setPaymentUrl(booking.getPaymentUrl());
+                    dto.setSessionId(booking.getPaymentSessionId());
+                    dto.setMessage("Booking retrieved successfully");
+                    return dto;
+                })
+                .toList();
+    }
+
+    public List<BookingResponseDto> getFutureBookingsByDoctorEmail(String doctorEmail) { // 1️⃣ Fetch doctor info
+        Doctor doctor = doctorClient.getDoctorByEmail(doctorEmail);
+        long doctorId = doctor.getId();
+
+        LocalDate today = LocalDate.now();
+
+        // 2️⃣ Fetch bookings for doctor where date >= today
+        return bookingRepository.findByDoctorIdAndDateGreaterThanEqual(doctorId, today)
+                .stream()
+                .map(booking -> {
+                    Patient patient = patientClient.getPatientById(booking.getPatientId());
+
+                    BookingResponseDto dto = new BookingResponseDto();
+                    dto.setBookingId(booking.getId());
+                    dto.setDoctorEmail(doctorEmail);
+                    dto.setPatientEmail(patient.getEmail());
+                    dto.setDate(booking.getDate());
+                    dto.setTime(booking.getTime());
+                    dto.setStatus(booking.getStatus().name());
+                    dto.setPaymentUrl(booking.getPaymentUrl());
+                    dto.setSessionId(booking.getPaymentSessionId());
+                    dto.setMessage("Booking retrieved successfully");
+                    return dto;
+                })
+                .toList();
     }
 }

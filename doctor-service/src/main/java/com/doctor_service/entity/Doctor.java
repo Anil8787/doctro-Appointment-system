@@ -29,6 +29,8 @@ public class Doctor {
     @Column(name = "contact", nullable = false)
     private String contact;
 
+
+
     @Column(name = "experience", nullable = false)
     private String experience;
 
@@ -58,6 +60,9 @@ public class Doctor {
     @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<DoctorAppointmentSchedule> appointmentSchedules;
+
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
 
     public List<DoctorAppointmentSchedule> getAppointmentSchedules() {
         return appointmentSchedules;

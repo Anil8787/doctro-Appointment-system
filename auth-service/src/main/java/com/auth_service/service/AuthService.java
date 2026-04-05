@@ -1,9 +1,12 @@
 package com.auth_service.service;
 
+import com.auth_service.client.PatientFeignClient;
 import com.auth_service.config.JwtUtil;
 import com.auth_service.dto.LoginRequest;
 import com.auth_service.dto.LoginResponse;
+import com.auth_service.dto.PatientCreateRequest;
 import com.auth_service.dto.RegisterRequest;
+import com.auth_service.entity.Role;
 import com.auth_service.entity.User;
 import com.auth_service.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -17,6 +20,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final PatientFeignClient  patientFeignClient;
 
 
     public String register(RegisterRequest request) {
@@ -26,8 +30,15 @@ public class AuthService {
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole());
+        user.setRole(Role.PATIENT);
         userRepository.save(user);
+        // 2️⃣ AUTO-CREATE PATIENT (NO JWT)
+        patientFeignClient.createPatient(
+                new PatientCreateRequest(
+                        user.getEmail(),   // authEmail (JWT subject later)
+                        user.getEmail()
+                )
+        );
         return "User registered successfully";
     }
 

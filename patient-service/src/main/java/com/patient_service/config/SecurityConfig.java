@@ -32,7 +32,9 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/v1/patient/getpatientbyid").permitAll() // allow internal calls with token
+                        .requestMatchers("/api/v1/patient/create").permitAll()
+                        .requestMatchers("/api/v1/patient/getpatientbyid").permitAll()// allow internal calls with token
+                        .requestMatchers("/api/v1/patient/getbyemail").permitAll()
                         .requestMatchers("/api/v1/patient/**").hasRole("PATIENT")
                         .anyRequest().authenticated()
                 )

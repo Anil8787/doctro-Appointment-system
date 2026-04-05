@@ -75,6 +75,24 @@ public class PatientService {
 
         return response;
     }
+
+    public void createPatientInternal(String authEmail, String email) {
+        if (patientRepository.existsByAuthEmail(authEmail)) {
+            throw new RuntimeException("Patient profile already exists");
+        }
+        Patient patient = new Patient();
+        patient.setAuthEmail(authEmail);
+        patient.setEmail(email);
+        patient.setName("New Patient");
+        patient.setContact("NA");
+
+        patientRepository.save(patient);
+    }
+
+    public Patient getPatientByEmail(String email) {
+        return patientRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Patient not found with email: " + email));
+    }
 }
 
 

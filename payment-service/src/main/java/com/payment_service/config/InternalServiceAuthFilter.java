@@ -20,12 +20,24 @@ public class InternalServiceAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String token = request.getHeader("X-Service-Token");
 
-        // Apply only to internal endpoints
+        // 🔐 Protect internal checkout endpoint
         if (path.startsWith("/product/v1/checkout")) {
-            if (!"booking-service-secret".equals(token)) {
+
+            if (!"booking-service-secret".equals(token)
+                    && !"medicine-service-secret".equals(token)) {
+
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
+        }
+
+        // 🌍 ALWAYS allow Stripe/browser redirects
+        if (path.startsWith("/product/v1/success")
+                || path.startsWith("/product/v1/cancel")
+                || path.equals("/favicon.ico")) {
+
+            filterChain.doFilter(request, response);
+            return;
         }
 
         System.out.println("🔥 InternalServiceAuthFilter PaymentService: path=" + path + ", token=" + token);

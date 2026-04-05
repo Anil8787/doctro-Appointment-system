@@ -15,9 +15,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final InternalServiceAuthFilter internalServiceAuthFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
+    public SecurityConfig(JwtFilter jwtFilter, InternalServiceAuthFilter internalServiceAuthFilter) {
         this.jwtFilter = jwtFilter;
+        this.internalServiceAuthFilter = internalServiceAuthFilter;
     }
 
     @Bean
@@ -43,7 +45,8 @@ public class SecurityConfig {
                 )
 
                 .addFilterBefore(jwtFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(internalServiceAuthFilter, JwtFilter.class); // ✅ add internal filter here
 
         return http.build();
     }

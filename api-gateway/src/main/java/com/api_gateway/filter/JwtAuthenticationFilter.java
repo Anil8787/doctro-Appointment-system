@@ -29,8 +29,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/login",
             "/api/v1/doctor/internal",
             "/api/v1/auth/request-otp",
-            "/api/v1/auth/verify-otp"
+            "/api/v1/auth/verify-otp",
             //"/api/v1/patient/internal" // add this
+
+            // 🔓 Medicine browsing (public)
+            "/api/v1/medicines",
+            "/api/v1/medicines/search"
     );
 
     private static final Map<String, List<String>> protectedEndpointsWithRoles = new LinkedHashMap<>();
@@ -41,8 +45,19 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         protectedEndpointsWithRoles.put("/api/v1/doctor/search", List.of("ROLE_PATIENT"));
         protectedEndpointsWithRoles.put("/api/v1/doctor", List.of("ROLE_DOCTOR","ROLE_ADMIN"));
         protectedEndpointsWithRoles.put("/api/v1/patient", List.of("ROLE_PATIENT"));
-        protectedEndpointsWithRoles.put("/api/v1/booking", List.of("ROLE_PATIENT"));
+        protectedEndpointsWithRoles.put("/api/v1/booking", List.of("ROLE_PATIENT","ROLE_DOCTOR"));
         protectedEndpointsWithRoles.put("/product/v1", List.of("ROLE_PATIENT", "ROLE_DOCTOR"));
+        // 📦 Medicine Order APIs
+        protectedEndpointsWithRoles.put("/api/v1/orders",
+                List.of("ROLE_PATIENT", "ROLE_DOCTOR"));
+
+        // 💊 Admin medicine management
+        protectedEndpointsWithRoles.put("/api/v1/medicines/admin",
+                List.of("ROLE_ADMIN"));
+
+        // 🛒 Cart APIs
+        protectedEndpointsWithRoles.put("/api/v1/cart",
+                List.of("ROLE_PATIENT"));
     }
 
 
@@ -56,8 +71,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         // ✅ ALLOW internal calls with service token
         String serviceToken = exchange.getRequest().getHeaders().getFirst("X-Service-Token");
         System.out.println("🔥 X-Service-Token: " + serviceToken);
-        if ("booking-service-secret".equals(serviceToken)) {
-            return chain.filter(exchange); // allow internal microservice calls
+//        if ("booking-service-secret".equals(serviceToken)) {
+//            return chain.filter(exchange); // allow internal microservice calls
+//        }
+        if ("booking-service-secret".equals(serviceToken)
+                || "medicine-service-secret".equals(serviceToken)) {
+            return chain.filter(exchange);
         }
 
         if (isPublicEndpoint(requestPath)) {

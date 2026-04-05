@@ -20,5 +20,7 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
 
     boolean existsByAuthEmail(String authEmail);
 
+    Optional<Doctor> findByEmail(String doctorEmail);
+
     // existing search query stays untouched
 }

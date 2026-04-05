@@ -11,7 +11,7 @@ import java.time.LocalTime;
 @Setter
 public class BookingRequestDto {
     private Long doctorId;
-    private Long patientId;
+    //private Long patientId;
     private LocalDate date;
     private LocalTime time;
     private BigDecimal amount; // add this to send payment amount

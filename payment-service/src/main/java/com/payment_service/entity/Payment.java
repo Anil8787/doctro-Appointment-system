@@ -1,8 +1,6 @@
 package com.payment_service.entity;
 
-
 import jakarta.persistence.*;
-
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -13,6 +11,7 @@ import java.time.LocalDateTime;
         name = "payments",
         indexes = {
                 @Index(name = "idx_payment_booking_id", columnList = "booking_id"),
+                @Index(name = "idx_payment_order_id", columnList = "order_id"),
                 @Index(name = "idx_payment_session_id", columnList = "stripe_session_id"),
                 @Index(name = "idx_payment_intent_id", columnList = "stripe_payment_intent_id")
         }
@@ -28,9 +27,13 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Booking reference (no FK in microservices)
-    @Column(name = "booking_id", nullable = false)
+    // Booking reference (for booking-service)
+    @Column(name = "booking_id")
     private Long bookingId;
+
+    // ✅ ADD THIS (for medicine-order-service)
+    @Column(name = "order_id")
+    private Long orderId;
 
     // Amount stored in major unit (e.g. 299.00)
     @Column(nullable = false, precision = 10, scale = 2)

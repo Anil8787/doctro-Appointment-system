@@ -8,6 +8,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/booking")
 public class BookingController {
@@ -27,12 +29,12 @@ public class BookingController {
             Authentication authentication
     ) {
         // patient ID or email from JWT
-        String patientId = authentication.getName();
+        String patientEmail = authentication.getName();
 
         // Override patientId in request to ensure security
         //request.setPatientId(Long.parseLong(patientId));
 
-        BookingResponseDto response = bookingService.createBooking(request);
+        BookingResponseDto response = bookingService.createBooking(request,patientEmail);
         return ResponseEntity.ok(response);
     }
 
@@ -49,7 +51,7 @@ public class BookingController {
 
     // ✅ Get booking by ID (patient can only view own booking)
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BookingResponseDto> getBooking(
             @PathVariable("id") Long bookingId,
             Authentication authentication
@@ -64,4 +66,27 @@ public class BookingController {
 
         return ResponseEntity.ok(response);
     }
+
+    // --------------------------
+    // Patient: get all bookings for logged-in patient
+    // --------------------------
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<List<BookingResponseDto>> getMyBookings(
+            Authentication authentication
+    ) {
+        String patientEmail = authentication.getName(); // from JWT
+        List<BookingResponseDto> bookings = bookingService.getBookingsByPatientEmail(patientEmail);
+        return ResponseEntity.ok(bookings);
+    }
+
+    @GetMapping("/doctor/me")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<List<BookingResponseDto>> getMyDoctorBookings(Authentication authentication) {
+        String doctorEmail = authentication.getName(); // from JWT
+        List<BookingResponseDto> bookings = bookingService.getFutureBookingsByDoctorEmail(doctorEmail);
+        return ResponseEntity.ok(bookings);
+    }
+
+
 }
